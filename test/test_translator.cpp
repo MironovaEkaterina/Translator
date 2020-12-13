@@ -3,7 +3,18 @@
 #include <gtest.h>
 
 
+TEST(Translator, cant_divide_by_0) {
+	std::string str = "2/0=";
+	Arithmetic_expressions a(str);
+	ASSERT_ANY_THROW(a.GetResult());
+} 
 
+TEST(Translator, two_points_in_the_number) {
+	std::string str = "1.2.34=";
+	Arithmetic_expressions a(str);
+	ASSERT_ANY_THROW(a.GetResult());
+}
+ 
 TEST(Translator, uncorrect_symbols) {
 	std::string str = "a+2=";
 	Arithmetic_expressions a(str);

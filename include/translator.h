@@ -69,6 +69,11 @@ public:
 		s = str;
 	}
 
+	~Arithmetic_expressions() {
+		for (int i = 0; i < v.size(); i++)
+			delete v[i];
+	}
+
 	double calculating() { //вычисление результата по обратной польской записи
 		std::vector<double> stack;
 		double t1, t2, t3;
@@ -92,7 +97,8 @@ public:
 					t3 = t1 * t2;
 					break;
 				case '/':
-					t3 = t1 / t2;
+					if (t2!=0) t3 = t1 / t2;
+					else throw std::logic_error("Uncorrect division");
 					break;
 				}
 				stack.push_back(t3);
@@ -105,7 +111,7 @@ public:
 	bool check_brackets() { //проверка корректности скобок
 		std::vector<char> stack;
 		bool f = 1;
-		for (int i = 0; i < s.size(); i++) {
+		for (int i = 0; i < s.size()-1; i++) {
 			if (s[i] == '(')
 				stack.push_back(s[i]);
 			if (s[i] == ')')
@@ -133,31 +139,31 @@ public:
 		return f;
 	}
 
-	bool syntax_analysis() { //синтаксический анализ
-		bool f = 1;
-		if (check_brackets() == 0) f = 0;
-		if (check_decimal() == 0) f = 0;
-		if (((s[0] < '0') || (s[0] > '9')) && (s[0] != '(')) f = 0;
-		if (s[s.size() - 1] != '=') f = 0;
-		for (int i = 0; i < s.size() - 1; i++) {
-			if (s[i] == '(')
-				if ((s[i + 1] == ')') || (s[i + 1] == '+') || (s[i + 1] == '-') || (s[i + 1] == '*') || (s[i + 1] == '/') || (s[i + 1] == '/')) {
-					f = 0; break;
-				}
-			if (s[i] == ')')
-				if ((s[i + 1] == '(') || ((s[i + 1] >= '0') && (s[i + 1] <= '9'))) {
-					f = 0; break;
-				}
-			if ((s[i] >= '0') && (s[i] <= '9'))
-				if (s[i + 1] == '(') {
-					f = 0; break;
-				}
-			if ((s[i] == '+') || (s[i] == '-') || (s[i] == '*') || (s[i] == '/'))
-				if ((s[i + 1] == ')') || (s[i + 1] == '+') || (s[i + 1] == '-') || (s[i + 1] == '*') || (s[i + 1] == '/') || (s[i + 1] == '/')) {
-					f = 0; break;
-				}
+	int syntax_analysis() { //синтаксический анализ
+		int state = 1;
+		if (check_brackets() == 0) state = 0; 
+		if (check_decimal() == 0) state = 0;
+		if (((s[0] < '0') || (s[0] > '9')) && (s[0] != '(')) state = 0;
+		if (s[s.size() - 1] != '=') state = 0;
+		if (state == 1) {
+			for (int i = 0; i < v.size() - 1; i++) {
+				switch (v[i]->GetType()) {
+				case openingbracket:
+					if ((v[i + 1]->GetType() == closingbracket) || (v[i + 1]->GetType() == operation))
+						state = 0; break;
+				case closingbracket:
+					if ((v[i + 1]->GetType() == openingbracket) || (v[i + 1]->GetType() == number))
+						state = 0; break;
+				case number:
+					if ((v[i + 1]->GetType() == openingbracket) || (v[i + 1]->GetType() == number))
+						state = 0; break;
+				case operation:
+					if ((v[i + 1]->GetType() == closingbracket) || (v[i + 1]->GetType() == operation))
+						state = 0; break;
+			    }
+			}
 		}
-		return f;
+		return state;
 	}
 
 	std::vector<Term*> reverse_polish_notation() { 
@@ -197,7 +203,6 @@ public:
 	}
 
 	std::vector<Term*> lexical_analysis() { //перевод из cтроки в вектор указателей на лексемы
-		if (syntax_analysis()) {
 			bool f = 0;
 			std::string N;
 			for (int i = 0; i < s.size(); i++) {
@@ -240,18 +245,24 @@ public:
 						break;
 					}
 					if (s[i] == '.') {
-						N.push_back(s[i]);
+						int k = 0;
+						for (int i = 0; i < N.size(); i++)
+							if (N[i] == '.') k++;
+						if (k<1)
+							N.push_back(s[i]);
+						else throw std::logic_error("Uncorrect syntax");
 					}
 				}
 			}
 			return v;
-		}
-		else throw std::logic_error("Uncorret syntax");
 	}
 
 	double GetResult() {
 		lexical_analysis();
-		reverse_polish_notation();
-		return calculating();
+		if (syntax_analysis()!=0) {
+			reverse_polish_notation();
+			return calculating();
+		}
+		else throw std::logic_error("Uncorrect syntax");
 	}
 };
